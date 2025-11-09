@@ -1,107 +1,109 @@
-
+// Question#3
+// Create the BST which stores the students object in BST and student object has the
+// property like name, roll and score. Create tree based on name of student AND Perform
+// following operations in BST:
+//  Insert the student record,
+//  Search the students based on name
+//  Delete the students whose score is less than 10
+//  And get the students whose score is max in tree.
+// In main function create the object array of students with 10 students from those store 7
+// seven students randomly and perform all above objects.
 
 #include <iostream>
+#include <string>
+#include <cstdlib>
+#include <ctime>
 using namespace std;
 
-class Node {
-public:
-    int val;
-    Node* l;
-    Node* r;
-    int h;
-    Node(int v) {
-        val = v;
-        l = r = NULL;
-        h = 1;
+struct Student { string name; int roll; int score; };
+struct Node { Student s; Node* left; Node* right; Node(const Student& st): s(st), left(nullptr), right(nullptr) {} };
+
+Node* insertNode(Node* root, const Student& st) {
+    if (!root) return new Node(st);
+    if (st.name < root->s.name) root->left = insertNode(root->left, st);
+    else if (st.name > root->s.name) root->right = insertNode(root->right, st);
+    else root->s = st;
+    return root;
+}
+
+Node* findMin(Node* n) {
+    while (n && n->left) n = n->left;
+    return n;
+}
+
+Node* removeByName(Node* root, const string& name) {
+    if (!root) return nullptr;
+    if (name < root->s.name) root->left = removeByName(root->left, name);
+    else if (name > root->s.name) root->right = removeByName(root->right, name);
+    else {
+        if (!root->left) { Node* r = root->right; delete root; return r; }
+        if (!root->right) { Node* l = root->left; delete root; return l; }
+        Node* m = findMin(root->right);
+        root->s = m->s;
+        root->right = removeByName(root->right, m->s.name);
     }
-};
+    return root;
+}
 
-class AVLTree {
-public:
-    Node* root;
-    AVLTree() { root = NULL; }
-
-    int height(Node* n) {
-        return n ? n->h : 0;
+Node* removeIfScoreLessThan(Node* root, int thresh) {
+    if (!root) return nullptr;
+    root->left = removeIfScoreLessThan(root->left, thresh);
+    root->right = removeIfScoreLessThan(root->right, thresh);
+    if (root->s.score < thresh) {
+        if (!root->left) { Node* r = root->right; delete root; return r; }
+        if (!root->right) { Node* l = root->left; delete root; return l; }
+        Node* m = findMin(root->right);
+        root->s = m->s;
+        root->right = removeByName(root->right, m->s.name);
     }
+    return root;
+}
 
-    int getBal(Node* n) {
-        return n ? height(n->l) - height(n->r) : 0;
-    }
+Node* searchByName(Node* root, const string& name) {
+    if (!root) return nullptr;
+    if (name < root->s.name) return searchByName(root->left, name);
+    if (name > root->s.name) return searchByName(root->right, name);
+    return root;
+}
 
-    Node* rightRotate(Node* y) {
-        Node* x = y->l;
-        Node* t2 = x->r;
-        x->r = y;
-        y->l = t2;
-        y->h = max(height(y->l), height(y->r)) + 1;
-        x->h = max(height(x->l), height(x->r)) + 1;
-        return x;
-    }
+Student* findMaxScore(Node* root) {
+    if (!root) return nullptr;
+    Student* best = &root->s;
+    Student* l = findMaxScore(root->left);
+    Student* r = findMaxScore(root->right);
+    if (l && l->score > best->score) best = l;
+    if (r && r->score > best->score) best = r;
+    return best;
+}
 
-    Node* leftRotate(Node* x) {
-        Node* y = x->r;
-        Node* t2 = y->l;
-        y->l = x;
-        x->r = t2;
-        x->h = max(height(x->l), height(x->r)) + 1;
-        y->h = max(height(y->l), height(y->r)) + 1;
-        return y;
-    }
-
-    Node* insert(Node* root, int v) {
-        if (!root) return new Node(v);
-        if (v < root->val) root->l = insert(root->l, v);
-        else if (v > root->val) root->r = insert(root->r, v);
-        else return root;
-
-        root->h = 1 + max(height(root->l), height(root->r));
-        int b = getBal(root);
-
-        if (b > 1 && v < root->l->val) return rightRotate(root);
-        if (b < -1 && v > root->r->val) return leftRotate(root);
-        if (b > 1 && v > root->l->val) {
-            root->l = leftRotate(root->l);
-            return rightRotate(root);
-        }
-        if (b < -1 && v < root->r->val) {
-            root->r = rightRotate(root->r);
-            return leftRotate(root);
-        }
-        return root;
-    }
-
-    void insert(int v) {
-        root = insert(root, v);
-    }
-
-    void inorder(Node* n) {
-        if (!n) return;
-        inorder(n->l);
-        cout << n->val << " ";
-        inorder(n->r);
-    }
-
-    void show() {
-        inorder(root);
-        cout << endl;
-    }
-
-    void rotateRootLeft() {
-        root = leftRotate(root);
-    }
-};
+void deleteTree(Node* root) {
+    if (!root) return;
+    deleteTree(root->left);
+    deleteTree(root->right);
+    delete root;
+}
 
 int main() {
-    AVLTree t;
-    int arr[7] = {50, 30, 70, 20, 40, 60, 80};
-    for (int i = 0; i < 7; i++) t.insert(arr[i]);
-    cout << "BEFORE INSERTION: ";
-    t.show();
-    t.insert(55);
-    cout << "AFTER INSERTION OF 55: ";
-    t.show();
-    t.rotateRootLeft();
-    cout << "AFTER LEFT ROTATION ON ROOT: ";
-    t.show();
+    Student arr[10] = {
+        {"Alice",1,12},{"Bob",2,9},{"Charlie",3,18},{"Diana",4,7},{"Evan",5,15},
+        {"Fiona",6,22},{"George",7,5},{"Hannah",8,14},{"Ian",9,10},{"Jane",10,8}
+    };
+    srand((unsigned)time(0));
+    int idx[10];
+    for (int i=0;i<10;i++) idx[i]=i;
+    for (int i=9;i>0;i--) {
+        int j = rand()%(i+1);
+        int t = idx[i]; idx[i]=idx[j]; idx[j]=t;
+    }
+    Node* root = nullptr;
+    for (int i=0;i<7;i++) root = insertNode(root, arr[idx[i]]);
+    Node* found = searchByName(root, arr[idx[2]].name);
+    if (found) cout << "Found: " << found->s.name << " " << found->s.roll << " " << found->s.score << "\n";
+    else cout << "Not found\n";
+    root = removeIfScoreLessThan(root, 10);
+    Student* mx = findMaxScore(root);
+    if (mx) cout << "Max: " << mx->name << " " << mx->roll << " " << mx->score << "\n";
+    else cout << "Tree empty\n";
+    deleteTree(root);
+    return 0;
 }
